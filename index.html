@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TWS Q4 Spend Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Barlow+Condensed:wght@500;600&display=swap">
+<style>
+:root{
+  --bg:#f1f4f6; --panel:#ffffff; --panel2:#f7f9fa; --ink:#15202b; --muted:#566374; --faint:#8a95a3; --line:#d8dee5;
+  --base:#0088a3; --up:#c2571a; --act:#9aa4b1; --spend:#55606e;
+  --warn-bg:#fdf0e3; --warn-ink:#7a3a05; --bad:#b3261e; --good:#1e7a46;
+  --sans:'IBM Plex Sans','Segoe UI',Arial,sans-serif; --num:'Barlow Condensed','Arial Narrow',Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#10161d; --panel:#18212b; --panel2:#1d2833; --ink:#e6ecf2; --muted:#a0adbb; --faint:#6f7c8b; --line:#2c3844;
+  --base:#1aa0b4; --up:#d96a2b; --act:#5b6878; --spend:#aab4c0;
+  --warn-bg:#3a2812; --warn-ink:#ffd2a1; --bad:#ff8a80; --good:#6fd39a;}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#10161d; --panel:#18212b; --panel2:#1d2833; --ink:#e6ecf2; --muted:#a0adbb; --faint:#6f7c8b; --line:#2c3844;
+  --base:#1aa0b4; --up:#d96a2b; --act:#5b6878; --spend:#aab4c0;
+  --warn-bg:#3a2812; --warn-ink:#ffd2a1; --bad:#ff8a80; --good:#6fd39a;}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:28px 48px;display:flex;flex-direction:column;gap:18px}
+h1{font-size:23px;font-weight:600;margin:0;text-wrap:balance}
+h2{font-size:16px;font-weight:600;margin:0}
+.sub{color:var(--muted);margin:2px 0 0;font-size:14px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.headline{font-size:18px;line-height:1.45;margin:0;max-width:80ch}
+.headline b{font-weight:600}
+.metrics{display:grid;grid-template-columns:repeat(5,1fr);background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.m{padding:14px 16px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.m:first-child{border-left:none}
+.m .k{font-size:12.5px;color:var(--muted);min-height:36px}
+.m .v{font-family:var(--num);font-size:38px;font-weight:600;line-height:1.05;font-variant-numeric:tabular-nums}
+.m .n{font-size:12.5px;color:var(--muted)}
+.m.up .v{color:var(--up)}
+.budget{display:flex;flex-direction:column;gap:10px}
+.bbar{display:flex;height:18px;border-radius:4px;overflow:hidden;background:var(--panel2);gap:2px}
+.bbar span{display:block;height:100%}
+.blegend{display:flex;flex-wrap:wrap;gap:6px 22px;font-size:13px;color:var(--muted)}
+.blegend b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.warn{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:10px 14px;font-size:13.5px}
+.charts{display:grid;grid-template-columns:3fr 2fr;gap:18px}
+.chartbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 16px 8px;min-width:0}
+.legend{display:flex;gap:6px 16px;font-size:12.5px;color:var(--muted);margin:6px 0 8px;flex-wrap:wrap}
+.lq{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px}
+.cw{position:relative;height:340px}
+.toolbar{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;margin-bottom:12px}
+.toolbar label{font-size:13.5px;color:var(--muted)}
+input,select,button{font:inherit;font-size:13.5px;color:var(--ink)}
+input[type=number],input[type=date],select{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+input[type=number]{width:74px;text-align:right;font-variant-numeric:tabular-nums}
+input.money{width:96px}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--up);border-color:var(--up);color:#fff;font-weight:600}
+button.primary:hover{filter:brightness(1.08)}
+button.x{padding:2px 8px;color:var(--muted)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--up);outline-offset:2px}
+.tscroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--panel)}
+td{padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.nw{white-space:nowrap}
+tr.added td{background:color-mix(in srgb,var(--up) 7%,transparent)}
+tr.done td{color:var(--faint)}
+.chip{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:1px 6px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.add{border-color:var(--up);color:var(--up)}
+.chip.live{border-color:var(--base);color:var(--base)}
+.zero{color:var(--bad);font-weight:600}
+.pos{color:var(--good);font-weight:600}
+.act{font-size:12.5px;color:var(--muted)}
+.foot{font-size:12.5px;color:var(--muted);margin:0;max-width:110ch}
+.scen{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;width:max-content}
+.seg button{border:none;border-radius:0;padding:6px 14px;background:var(--panel)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:600}
+.sectionhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.sectionhead p{margin:0;font-size:13px;color:var(--muted)}
+@media (max-width:980px){.charts{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}
+  .m{border-left:none;border-top:1px solid var(--line)}.m:nth-child(-n+2){border-top:none}.m:nth-child(even){border-left:1px solid var(--line)}.cw{height:280px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>TWS Q4 Spend Simulator</h1>
+      <p class="sub">Select Galaxy Watch, Buds, Fit and Ring products · $700k budget from W35 · revenue in USD</p>
+    </div>
+    <div class="scen">
+      <span id="scenLbl">2025’s 11.11 and 12.12 accessory spike</span>
+      <div class="seg" role="group" aria-labelledby="scenLbl">
+        <button type="button" id="scRepeat" aria-pressed="true">Repeats</button>
+        <button type="button" id="scSmooth" aria-pressed="false">Doesn’t repeat</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="headline" id="headline"></p>
+
+  <div class="metrics">
+    <div class="m"><div class="k">Sales, 21 Sep – 31 Dec (W39–W53)</div><div class="v" id="mSales"></div><div class="n" id="mSalesN"></div></div>
+    <div class="m"><div class="k">Expected without ads</div><div class="v" id="mBase"></div><div class="n" id="mBaseN"></div></div>
+    <div class="m up"><div class="k">Uplift from the ads</div><div class="v" id="mUp"></div><div class="n" id="mUpN"></div></div>
+    <div class="m"><div class="k">Full-year 2026</div><div class="v" id="mFY"></div><div class="n" id="mFYN"></div></div>
+    <div class="m"><div class="k">Real return on spend from 21 Sep</div><div class="v" id="mReal"></div><div class="n" id="mRealN"></div></div>
+  </div>
+
+  <div class="panel budget">
+    <div class="sectionhead"><h2>Budget from W35: <span id="bTotal"></span></h2><p id="bNote"></p></div>
+    <div class="bbar" id="bbar" aria-label="Budget allocation"></div>
+    <div class="blegend" id="blegend"></div>
+    <div class="warn" id="warn" hidden></div>
+  </div>
+
+  <div class="charts">
+    <div class="chartbox">
+      <h2>Weekly revenue</h2>
+      <div class="legend"><span><i class="sw" style="background:var(--act)"></i>Actual</span><span><i class="sw" style="background:var(--base)"></i>Expected without ads (2025 pattern)</span><span><i class="sw" style="background:var(--up)"></i>Uplift from ads</span><span>Hover a spike for what happened</span></div>
+      <div class="cw"><canvas id="weekly" role="img" aria-label="Weekly revenue: actuals to W38, then run-rate plus ad uplift"></canvas></div>
+    </div>
+    <div class="chartbox">
+      <h2>Cumulative 2026 revenue</h2>
+      <div class="legend"><span><i class="lq" style="background:var(--up)"></i>With the plan</span><span><i class="lq" style="background:var(--base)"></i>Expected without ads</span></div>
+      <div class="cw"><canvas id="cum" role="img" aria-label="Cumulative 2026 revenue with the plan versus run-rate"></canvas></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="sectionhead"><h2>By channel</h2><p>Ads add revenue on a channel only when spend × ROAS beats what that channel would sell anyway that week.</p></div>
+    <div class="tscroll"><table id="chTable"></table></div>
+  </div>
+
+  <div class="panel">
+    <div class="sectionhead"><h2>Spend plan</h2><p>Edit the ROAS on any line. Add plans for the budget that isn't decided yet.</p></div>
+    <div class="toolbar">
+      <label for="allRoas">Set ROAS on every line</label>
+      <input id="allRoas" type="number" min="0" max="20" step="0.1" value="4"><span>x</span>
+      <button type="button" id="applyAll">Apply</button>
+      <span style="flex:1"></span>
+      <button type="button" class="primary" id="addBtn">+ Add plan</button>
+    </div>
+    <div class="tscroll"><table id="planTable"></table></div>
+  </div>
+
+  <p class="foot">Source: TWS (GSCM Data), W01–W38, W35 corrected to $53k. Expected sales without ads follow 2025’s weekly pattern: each week’s 2025 sales divided by the 2025 W35–38 average, multiplied by the 2026 W35–38 level. The toggle sets whether 2025’s 11.11–12.12 accessory spike (mostly TikTok) repeats; “Doesn’t repeat” replaces accessory sales in W46–51 of 2025 with their usual level. TWS has no 2025 data, so it uses the total APS 2025 pattern (Samsung.com plus marketplaces). The 2026 level is $43k a week, split 58.6% Samsung.com (E-STORE) and 41.4% marketplaces (ONLINE) using W36–38, then across marketplaces by your shares. ROAS counts all sales on a channel; overlapping lines on one channel add up. Spend before 21 Sep is already in the actuals. Weeks run Monday to Sunday; W53 is 28–31 Dec and uses 2025’s W52 pattern.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const CFG = {"totalBudget": 700000, "actual": [42, 43, 30, 32, 36, 33, 31, 31, 33, 46, 232, 154, 91, 86, 58, 55, 55, 56, 67, 54, 44, 48, 63, 55, 39, 52, 51, 46, 36, 43, 47, 40, 341, 79, 53, 44, 40, 35], "yMax": 430, "idx": {"repeat": {"mp": [1.437, 0.7212, 0.7607, 1.1682, 1.2778, 0.7817, 0.8951, 0.5347, 0.9047, 1.0294, 0.7468, 1.2079, 0.9294, 1.1451, 0.6911, 0.6934, 1.0259, 0.9361, 1.1859, 0.945, 0.9324, 0.892, 1.2246, 0.6554, 0.7895, 0.8417, 0.7833, 1.4663, 1.1116, 1.0389, 0.979, 1.3432, 0.9559, 0.9192, 0.905, 0.8085, 1.1794, 1.1072, 1.2832, 1.2888, 1.9409, 1.1276, 1.0724, 1.2276, 1.1712, 3.8572, 1.6674, 1.3924, 2.1701, 2.8371, 1.1065, 0.7768, 0.7768], "scom": [5.2286, 4.2367, 1.3733, 15.2373, 4.5633, 2.9614, 2.6838, 1.4185, 1.4526, 0.9955, 1.0266, 0.77, 2.3309, 1.8514, 2.3975, 1.5922, 1.2237, 1.0449, 0.8637, 0.9289, 0.7445, 1.1992, 0.951, 0.9147, 0.9357, 1.0443, 0.7941, 8.894, 2.8457, 2.5079, 2.9061, 1.3909, 1.1431, 1.0943, 1.0513, 0.8656, 1.0811, 1.0021, 0.827, 0.9315, 0.7323, 0.4257, 0.4884, 0.5791, 1.0214, 1.1683, 0.6388, 1.1743, 0.7613, 0.633, 0.6122, 0.6657, 0.6657], "total": [1.8565, 1.1102, 0.8285, 2.7247, 1.6413, 1.0228, 1.093, 0.6325, 0.9653, 1.0256, 0.7777, 1.1595, 1.0845, 1.2232, 0.8799, 0.7928, 1.0477, 0.9481, 1.1502, 0.9433, 0.9116, 0.926, 1.1944, 0.6841, 0.8056, 0.8641, 0.7845, 2.288, 1.3035, 1.2014, 1.1922, 1.3485, 0.9766, 0.9386, 0.9212, 0.8148, 1.1685, 1.0955, 1.2327, 1.2493, 1.8072, 1.05, 1.0078, 1.1558, 1.1546, 3.5597, 1.5536, 1.3683, 2.0142, 2.5932, 1.0518, 0.7645, 0.7645]}, "smooth": {"mp": [1.437, 0.7212, 0.7607, 1.1682, 1.2778, 0.7817, 0.8951, 0.5347, 0.9047, 1.0294, 0.7468, 1.2079, 0.9294, 1.1451, 0.6911, 0.6934, 1.0259, 0.9361, 1.1859, 0.945, 0.9324, 0.892, 1.2246, 0.6554, 0.7895, 0.8417, 0.7833, 1.4663, 1.1116, 1.0389, 0.979, 1.3432, 0.9559, 0.9192, 0.905, 0.8085, 1.1794, 1.1072, 1.2832, 1.2888, 1.9409, 1.1276, 1.0724, 1.2276, 1.1712, 1.9609, 1.0654, 1.1272, 1.0865, 1.5434, 0.8169, 0.7768, 0.7768], "scom": [5.2286, 4.2367, 1.3733, 15.2373, 4.5633, 2.9614, 2.6838, 1.4185, 1.4526, 0.9955, 1.0266, 0.77, 2.3309, 1.8514, 2.3975, 1.5922, 1.2237, 1.0449, 0.8637, 0.9289, 0.7445, 1.1992, 0.951, 0.9147, 0.9357, 1.0443, 0.7941, 8.894, 2.8457, 2.5079, 2.9061, 1.3909, 1.1431, 1.0943, 1.0513, 0.8656, 1.0811, 1.0021, 0.827, 0.9315, 0.7323, 0.4257, 0.4884, 0.5791, 1.0214, 1.1683, 0.6388, 1.1743, 0.7613, 0.633, 0.6122, 0.6657, 0.6657], "total": [1.8565, 1.1102, 0.8285, 2.7247, 1.6413, 1.0228, 1.093, 0.6325, 0.9653, 1.0256, 0.7777, 1.1595, 1.0845, 1.2232, 0.8799, 0.7928, 1.0477, 0.9481, 1.1502, 0.9433, 0.9116, 0.926, 1.1944, 0.6841, 0.8056, 0.8641, 0.7845, 2.288, 1.3035, 1.2014, 1.1922, 1.3485, 0.9766, 0.9386, 0.9212, 0.8148, 1.1685, 1.0955, 1.2327, 1.2493, 1.8072, 1.05, 1.0078, 1.1558, 1.1546, 1.8732, 1.0182, 1.1324, 1.0505, 1.4427, 0.7942, 0.7645, 0.7645]}}, "group": {"Samsung.com": "total", "Shopee": "total", "TikTokshop/Tokopedia": "total", "Lazada": "total", "Blibli": "total"}, "baseline": {"Samsung.com": 25.21, "Shopee": 11.94, "TikTokshop/Tokopedia": 3.88, "Lazada": 1.64, "Blibli": 0.32}, "channelNotes": {"Samsung.com": "E-STORE, 58.6% of the total", "Shopee": "67.1% of marketplace (ONLINE)", "TikTokshop/Tokopedia": "TikTok 14.7% + Tokopedia 7.1% of ONLINE", "Lazada": "9.2% of ONLINE", "Blibli": "1.8% of ONLINE"}, "plan": [{"start": "7 Sep", "end": "30 Sep", "channel": "Shopee", "action": "Co-Promotion", "platform": "Search Shopee", "budget": 3011.0}, {"start": "11 Sep", "end": "30 Sep", "channel": "TikTokshop/Tokopedia", "action": "Co-Promotion", "platform": "TikTok/ Tokopedia (Search, Banners)", "budget": 10767.0}, {"start": "7 Sep", "end": "30 Sep", "channel": "Samsung.com", "action": "Social Mkt", "platform": "Google (Demand Gen) · Google (UACe) · Google (UACi)", "budget": 12920.0}, {"start": "10 Sep", "end": "30 Sep", "channel": "Shopee", "action": "Social Mkt", "platform": "META/Shopee (CPAS Shopee)", "budget": 3011.0}, {"start": "9 Sep", "end": "30 Sep", "channel": "Samsung.com", "action": "Affiliate Mkt", "platform": "Optimise (via Mindshare)", "budget": 3000.0}, {"start": "8 Sep", "end": "30 Sep", "channel": "Shopee", "action": "Affiliate Mkt", "platform": "Shopee Affiliate", "budget": 7025.0}, {"start": "18 Sep", "end": "30 Sep", "channel": "Blibli", "action": "Co-Promotion", "platform": "Blibli Banners", "budget": 7340.0}, {"start": "16 Sep", "end": "15 Oct", "channel": "Shopee", "action": "Social Mkt", "platform": "Instagram (Community Affiliate)", "budget": 2747.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "Shopee", "action": "Co-Promotion", "platform": "Shopee (Search, Banners)", "budget": 11818.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "TikTokshop/Tokopedia", "action": "Co-Promotion", "platform": "TikTok/ Tokopedia (Search, Banners)", "budget": 11458.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "Blibli", "action": "Co-Promotion", "platform": "Blibli Banners", "budget": 7870.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "Samsung.com", "action": "Social Mkt", "platform": "Google (Demand Gen) · Google (UACe) · Google (UACi)", "budget": 12744.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "Shopee", "action": "Social Mkt", "platform": "META/Shopee (CPAS Shopee)", "budget": 3989.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "Shopee", "action": "Social Mkt", "platform": "Instagram (Community Affiliate)", "budget": 3725.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "Samsung.com", "action": "Affiliate Mkt", "platform": "Optimise (via Mindshare)", "budget": 3978.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "Shopee", "action": "Affiliate Mkt", "platform": "Shopee Affiliate", "budget": 8003.0}, {"start": "1 Oct", "end": "31 Oct", "channel": "Samsung.com", "action": "Review", "platform": "Samsung.com", "budget": 14351.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "Shopee", "action": "Co-Promotion", "platform": "Shopee (Search, Banners)", "budget": 11821.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "TikTokshop/Tokopedia", "action": "Co-Promotion", "platform": "TikTok/ Tokopedia (Search, Banners)", "budget": 14423.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "Blibli", "action": "Co-Promotion", "platform": "Blibli Banners", "budget": 10261.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "Samsung.com", "action": "Social Mkt", "platform": "Google (Demand Gen) · Google (UACe) · Google (UACi)", "budget": 12481.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "Shopee", "action": "Social Mkt", "platform": "META/Shopee (CPAS Shopee)", "budget": 3989.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "Shopee", "action": "Social Mkt", "platform": "Instagram (Community Affiliate)", "budget": 3725.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "Samsung.com", "action": "Affiliate Mkt", "platform": "Optimise (via Mindshare)", "budget": 3978.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "Shopee", "action": "Affiliate Mkt", "platform": "Shopee Affiliate", "budget": 8003.0}, {"start": "1 Nov", "end": "30 Nov", "channel": "Samsung.com", "action": "Review", "platform": "Samsung.com", "budget": 14351.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Shopee", "action": "Co-Promotion", "platform": "Shopee (Search, Banners)", "budget": 7475.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "TikTokshop/Tokopedia", "action": "Co-Promotion", "platform": "TikTok/ Tokopedia (Search, Banners)", "budget": 12134.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Blibli", "action": "Co-Promotion", "platform": "Blibli Banners", "budget": 9813.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Samsung.com", "action": "Social Mkt", "platform": "Google (Demand Gen) · Google (UACe) · Google (UACi)", "budget": 10926.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Shopee", "action": "Social Mkt", "platform": "META/Shopee (CPAS Shopee)", "budget": 3995.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Shopee", "action": "Social Mkt", "platform": "Instagram (Community Affiliate)", "budget": 8539.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Samsung.com", "action": "Social Mkt", "platform": "Advent Calendar", "budget": 10000.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Samsung.com", "action": "Affiliate Mkt", "platform": "Optimise (via Mindshare)", "budget": 3978.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Shopee", "action": "Affiliate Mkt", "platform": "Shopee Affiliate", "budget": 8003.0}, {"start": "1 Dec", "end": "31 Dec", "channel": "Samsung.com", "action": "Review", "platform": "Samsung.com", "budget": 14351.0}], "notes": [{"w": 11, "tx": 12.6, "ty": 300, "al": "left", "t": ["Galaxy Buds4 launch", "W11–12 · Buds4 Pro $252k"], "tip": ["First two weeks of Buds4 sales.", "Buds4 Pro: ~1,600 units, $252k.", "Buds Core also sold ~1,800 units."]}, {"w": 33, "tx": 31.4, "ty": 392, "al": "right", "t": ["Watch Ultra2 & Watch9 launch", "Ultra2 $183k · Watch9 $114k"], "tip": ["First week of Watch Ultra2 and Watch9 sales.", "Ultra2: 443 units, $183k.", "Watch9 40 & 44mm: 514 units, $114k."]}]};
+const CH = ['Samsung.com','Shopee','TikTokshop/Tokopedia','Lazada','Blibli'];
+const MON = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+const DAY = 864e5, W1 = Date.UTC(2025,11,29)/DAY, S = Date.UTC(2026,8,21)/DAY, E = Date.UTC(2026,11,31)/DAY, N = E-S+1;
+const LASTW = 4/7, FUTW = 14 + LASTW;
+const $ = id => document.getElementById(id);
+const iso = d => new Date(d*DAY).toISOString().slice(0,10);
+const pretty = d => { const x = new Date(d*DAY); return x.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][x.getUTCMonth()]; };
+const parseShort = s => { const [d,m] = s.trim().split(/\s+/); return Date.UTC(2026, MON[m], +d)/DAY; };
+const parseIso = s => { const [y,m,d] = s.split('-').map(Number); return Date.UTC(y,m-1,d)/DAY; };
+const fmtK = v => { const a = Math.abs(v), s = v < 0 ? '−' : ''; if (a >= 1000) return s+'$'+(a/1000).toFixed(2)+'M'; if (a >= 100) return s+'$'+Math.round(a)+'k'; if (a >= 1) return s+'$'+a.toFixed(1)+'k'; return s+'$'+Math.round(a*1000); };
+const fmtD = v => '$'+Math.round(v).toLocaleString('en-US');
+const BASE = CFG.baseline, YTD = CFG.actual.reduce((a,b)=>a+b,0);
+let scen = 'repeat';
+const baseDay = (c,i) => (BASE[c]||0) * CFG.idx[scen][CFG.group[c]][38 + Math.floor(i/7)] / 7;
+
+let nextId = 1;
+const lines = CFG.plan.map(p => ({id:nextId++, decided:true, start:parseShort(p.start), end:parseShort(p.end), channel:p.channel, action:p.action, platform:p.platform, budget:p.budget, roas:4}));
+
+function compute(){
+  const attr = {}, active = {}, spendF = {};
+  CH.forEach(c => { attr[c] = new Float64Array(N); active[c] = new Uint8Array(N); spendF[c] = 0; });
+  let spentPre = 0, decidedTot = 0, addedTot = 0, futSpend = 0;
+  lines.forEach(l => {
+    l.valid = l.end >= l.start && l.budget >= 0 && CH.includes(l.channel);
+    l.adds = 0; l.fut = 0; l.pre = 0;
+    if (l.decided) decidedTot += l.budget; else addedTot += l.budget;
+    if (!l.valid) return;
+    const D = l.end - l.start + 1, perDay = l.budget/D/1000;
+    for (let d = l.start; d <= l.end; d++){
+      if (d < S){ l.pre += perDay*1000; continue; }
+      if (d > E) continue;
+      const i = d - S; attr[l.channel][i] += perDay*l.roas; active[l.channel][i] = 1; l.fut += perDay*1000;
+    }
+    spentPre += l.pre; futSpend += l.fut; spendF[l.channel] += l.fut;
+  });
+  const weekUp = new Float64Array(54), weekBase = new Float64Array(54), chUp = {}, chSales = {}, chBase = {};
+  CH.forEach(c => { chUp[c] = 0; chSales[c] = 0; chBase[c] = 0; });
+  CH.forEach(c => {
+    for (let i = 0; i < N; i++){
+      const bd = baseDay(c,i); let sales = bd, up = 0;
+      chBase[c] += bd; weekBase[39 + Math.floor(i/7)] += bd;
+      if (active[c][i]){ sales = Math.max(bd, attr[c][i]); up = sales - bd; }
+      chSales[c] += sales; chUp[c] += up;
+      weekUp[39 + Math.floor(i/7)] += up;
+      if (up > 0){
+        lines.forEach(l => { if (l.valid && l.channel === c){ const d = S + i; if (d >= l.start && d <= l.end){ const per = l.budget/(l.end-l.start+1)/1000*l.roas; l.adds += up*per/attr[c][i]; } } });
+      }
+    }
+  });
+  const uplift = CH.reduce((a,c)=>a+chUp[c],0);
+  const baseFut = CH.reduce((a,c)=>a+chBase[c],0);
+  return {spentPre, decidedTot, addedTot, futSpend, spendF, weekUp, weekBase, chUp, chSales, chBase, baseFut, uplift};
+}
+
+let wchart, cchart;
+function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+function render(){
+  const r = compute();
+  const baseFut = r.baseFut, sales = baseFut + r.uplift, fy = YTD + sales, RUNRATE_FY = YTD + baseFut, lvl = CH.reduce((a,c)=>a+(BASE[c]||0),0);
+  $('mSales').textContent = fmtK(sales);
+  $('mSalesN').textContent = fmtK(sales/FUTW)+' a week vs '+fmtK(lvl)+' in W35–38';
+  $('mBase').textContent = fmtK(baseFut);
+  $('mBaseN').textContent = fmtK(baseFut/FUTW)+' a week, following 2025’s pattern';
+  $('mUp').textContent = '+'+fmtK(r.uplift);
+  $('mUpN').textContent = 'from '+fmtD(r.futSpend)+' of spend from 21 Sep';
+  $('mFY').textContent = fmtK(fy);
+  $('mFYN').textContent = 'vs '+fmtK(RUNRATE_FY)+' without ads';
+  const real = r.futSpend > 0 ? r.uplift/(r.futSpend/1000) : null;
+  $('mReal').textContent = real === null ? '—' : real.toFixed(2)+'x';
+  $('mRealN').textContent = real === null ? 'No spend' : (real < 1 ? 'Ads bring back less than they cost' : 'Break-even margin '+Math.round(100/real)+'%');
+
+  // budget
+  const T = CFG.totalBudget, decFut = r.decidedTot - lines.filter(l=>l.decided).reduce((a,l)=>a+l.pre,0);
+  const addPre = lines.filter(l=>!l.decided).reduce((a,l)=>a+l.pre,0);
+  const rem = T - r.decidedTot - r.addedTot;
+  $('bTotal').textContent = fmtD(T);
+  $('bNote').textContent = rem >= 0 ? fmtD(rem)+' still to allocate' : 'Over budget by '+fmtD(-rem);
+  const segs = [['Spent by 20 Sep', r.spentPre - addPre, 'var(--spend)'], ['Decided, still to run', decFut, 'var(--base)'], ['Your added plans', r.addedTot, 'var(--up)'], ['Not allocated', Math.max(rem,0), 'transparent']];
+  const scale = Math.max(T, r.decidedTot + r.addedTot);
+  $('bbar').innerHTML = segs.map(s => s[1] > 0 ? '<span style="width:'+(s[1]/scale*100)+'%;background:'+s[2]+'" title="'+s[0]+': '+fmtD(s[1])+'"></span>' : '').join('');
+  $('blegend').innerHTML = segs.map(s => '<span><i class="sw" style="background:'+s[2]+';border:1px solid var(--line)"></i>'+s[0]+' <b>'+fmtD(s[1])+'</b></span>').join('');
+  const warns = [];
+  if (rem < 0) warns.push('Your plans total '+fmtD(r.decidedTot + r.addedTot)+', which is '+fmtD(-rem)+' more than the '+fmtD(T)+' budget.');
+  const bad = lines.filter(l => !l.valid);
+  if (bad.length) warns.push(bad.length+' added plan'+(bad.length>1?'s have':' has')+' an end date before its start date and '+(bad.length>1?'are':'is')+' left out.');
+  $('warn').hidden = !warns.length; $('warn').textContent = warns.join(' ');
+
+  // headline
+  const wasted = lines.filter(l => l.valid && l.fut > 0 && l.adds < 0.05).reduce((a,l)=>a+l.fut,0);
+  $('headline').innerHTML = 'From 21 Sep to 31 Dec the plan spends <b>'+fmtD(r.futSpend)+'</b> and adds <b>'+fmtK(r.uplift)+'</b> of new sales, taking 2026 to <b>'+fmtK(fy)+'</b>'+(real!==null?' (a real return of <b>'+real.toFixed(2)+'x</b>)':'')+'.'+(wasted > 0 ? ' <b>'+fmtD(wasted)+'</b> of that spend sits on lines that add nothing at these ROAS values.' : '');
+
+  // channel table
+  let h = '<tr><th>Channel</th><th class="r">W35–38 sales / week</th><th class="r">Expected / week, no ads</th><th class="r">Spend from 21 Sep</th><th class="r">Sales in ad period</th><th class="r">Uplift</th><th class="r">Real return</th><th>Note</th></tr>';
+  CH.forEach(c => {
+    const sp = r.spendF[c], up = r.chUp[c], rr = sp > 0 ? up/(sp/1000) : null;
+    h += '<tr><td class="nw">'+c+'</td><td class="r">'+fmtK(BASE[c]||0)+'</td><td class="r">'+fmtK(r.chBase[c]/FUTW)+'</td><td class="r">'+fmtD(sp)+'</td><td class="r">'+fmtK(r.chSales[c])+'</td><td class="r '+(sp>0 && up<0.05?'zero':'')+'">'+(up>0?'+':'')+fmtK(up)+'</td><td class="r">'+(rr===null?'—':rr.toFixed(2)+'x')+'</td><td class="act">'+(CFG.channelNotes[c]||'')+'</td></tr>';
+  });
+  $('chTable').innerHTML = h;
+
+  // plan derived cells
+  lines.forEach(l => {
+    const a = $('adds'+l.id), f = $('fut'+l.id);
+    if (f) f.textContent = l.fut > 0 ? fmtD(l.fut) : '—';
+    if (a){ if (!l.valid || l.fut === 0){ a.textContent = '—'; a.className = 'r'; } else { a.textContent = l.adds < 0.05 ? '$0' : '+'+fmtK(l.adds); a.className = 'r '+(l.adds < 0.05 ? 'zero' : 'pos'); } }
+  });
+
+  // charts
+  if (wchart){
+    const up = [], bs = [];
+    for (let w = 1; w <= 53; w++){
+      if (w <= 38){ up.push(null); bs.push(null); }
+      else { bs.push(+r.weekBase[w].toFixed(2)); up.push(+r.weekUp[w].toFixed(2)); }
+    }
+    wchart.data.datasets[1].data = bs; wchart.data.datasets[2].data = up; wchart.update('none');
+    let a = 0, b = 0; const ca = [], cb = [];
+    for (let w = 1; w <= 53; w++){
+      const base = w <= 38 ? CFG.actual[w-1] : r.weekBase[w];
+      a += base + (w >= 39 ? r.weekUp[w] : 0); b += base; ca.push(+a.toFixed(1)); cb.push(+b.toFixed(1));
+    }
+    cchart.data.datasets[0].data = ca; cchart.data.datasets[1].data = cb; cchart.update('none');
+  }
+}
+
+function roasCell(l){ return '<input type="number" id="roas'+l.id+'" min="0" max="20" step="0.1" value="'+l.roas+'" aria-label="ROAS"'+(l.fut===0&&l.decided&&l.end<S?' disabled':'')+'> x'; }
+function buildTable(){
+  compute();
+  lines.sort((a,b)=> (a.start-b.start) || (a.decided===b.decided?0:(a.decided?-1:1)) || a.channel.localeCompare(b.channel));
+  let h = '<tr><th></th><th>Start</th><th>End</th><th>Channel</th><th>Activity</th><th class="r">Budget</th><th class="r">Spend from 21 Sep</th><th class="r">ROAS</th><th class="r">Adds</th><th></th></tr>';
+  lines.forEach(l => {
+    const done = l.decided && l.end < S, live = l.decided && l.start < S && l.end >= S;
+    const chip = !l.decided ? '<span class="chip add">Added</span>' : done ? '<span class="chip">Done</span>' : live ? '<span class="chip live">Running</span>' : '<span class="chip">Decided</span>';
+    if (l.decided){
+      h += '<tr class="'+(done?'done':'')+'"><td>'+chip+'</td><td class="nw">'+pretty(l.start)+'</td><td class="nw">'+pretty(l.end)+'</td><td class="nw">'+l.channel+'</td><td><div>'+l.action+'</div><div class="act">'+l.platform+'</div></td><td class="r">'+fmtD(l.budget)+'</td><td class="r" id="fut'+l.id+'"></td><td class="r nw">'+roasCell(l)+'</td><td class="r" id="adds'+l.id+'"></td><td></td></tr>';
+    } else {
+      h += '<tr class="added"><td>'+chip+'</td><td><input type="date" id="st'+l.id+'" min="2026-09-21" max="2026-12-31" value="'+iso(l.start)+'" aria-label="Start date"></td><td><input type="date" id="en'+l.id+'" min="2026-09-21" max="2026-12-31" value="'+iso(l.end)+'" aria-label="End date"></td><td><select id="ch'+l.id+'" aria-label="Channel">'+CH.map(c=>'<option'+(c===l.channel?' selected':'')+'>'+c+'</option>').join('')+'</select></td><td><input type="text" id="lb'+l.id+'" value="'+l.action.replace(/"/g,'&quot;')+'" aria-label="Activity" style="width:150px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:4px 6px"></td><td class="r nw">$<input class="money" type="number" id="bu'+l.id+'" min="0" step="500" value="'+l.budget+'" aria-label="Budget in dollars"></td><td class="r" id="fut'+l.id+'"></td><td class="r nw">'+roasCell(l)+'</td><td class="r" id="adds'+l.id+'"></td><td><button type="button" class="x" id="rm'+l.id+'" aria-label="Remove plan">Remove</button></td></tr>';
+    }
+  });
+  $('planTable').innerHTML = h;
+  lines.forEach(l => {
+    const ro = $('roas'+l.id); if (ro) ro.addEventListener('input', () => { if (ro.value !== '') { l.roas = Math.max(0, +ro.value); render(); } });
+    if (!l.decided){
+      $('st'+l.id).addEventListener('change', e => { if (e.target.value){ l.start = parseIso(e.target.value); render(); } });
+      $('en'+l.id).addEventListener('change', e => { if (e.target.value){ l.end = parseIso(e.target.value); render(); } });
+      $('ch'+l.id).addEventListener('change', e => { l.channel = e.target.value; render(); });
+      $('lb'+l.id).addEventListener('input', e => { l.action = e.target.value; });
+      $('bu'+l.id).addEventListener('input', e => { if (e.target.value !== ''){ l.budget = Math.max(0, +e.target.value); render(); } });
+      $('rm'+l.id).addEventListener('click', () => { const i = lines.indexOf(l); lines.splice(i,1); buildTable(); render(); });
+    }
+  });
+}
+
+function addPlan(){
+  const r = compute(), rem = CFG.totalBudget - r.decidedTot - r.addedTot;
+  lines.push({id:nextId++, decided:false, start:Date.UTC(2026,10,1)/DAY, end:Date.UTC(2026,10,30)/DAY, channel:'Shopee', action:'New plan', platform:'', budget:Math.max(0, Math.min(Math.round(rem/500)*500, 20000)), roas:+$('allRoas').value || 4});
+  buildTable(); render();
+  const el = $('bu'+(nextId-1)); if (el) el.focus();
+}
+
+const NOTES = CFG.notes;
+const noteLabels = {id:'noteLabels', afterDatasetsDraw(c){
+  const {ctx, scales:{x,y}} = c; ctx.save();
+  NOTES.forEach(n => {
+    const i = n.w - 1, bx = x.getPixelForValue(i), by = y.getPixelForValue(CFG.actual[i]);
+    const tx = x.getPixelForValue(n.tx - 1), ty = y.getPixelForValue(n.ty);
+    ctx.strokeStyle = css('--faint'); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(bx, by-3); ctx.lineTo(bx, ty+6); ctx.lineTo(tx, ty+6); ctx.stroke();
+    ctx.textAlign = n.al; ctx.fillStyle = css('--ink'); ctx.font = '600 12px IBM Plex Sans, Arial, sans-serif'; ctx.fillText(n.t[0], tx, ty-14);
+    ctx.fillStyle = css('--muted'); ctx.font = '12px IBM Plex Sans, Arial, sans-serif'; ctx.fillText(n.t[1], tx, ty);
+  });
+  ctx.restore(); }};
+
+function buildCharts(){
+  if (!window.Chart){ document.querySelectorAll('.cw').forEach(e => e.innerHTML = '<p class="act">The chart library didn’t load. The numbers above still update.</p>'); return; }
+  const labels = Array.from({length:53}, (_,i) => 'W'+String(i+1).padStart(2,'0'));
+  const ink = css('--muted'), grid = css('--line');
+  const tick = {color:ink, font:{family:'IBM Plex Sans'}};
+  wchart = new Chart($('weekly'), {type:'bar', plugins:[noteLabels], data:{labels, datasets:[
+    {label:'Actual', data:[...CFG.actual, ...Array(15).fill(null)], backgroundColor:css('--act'), stack:'s', borderRadius:2},
+    {label:'Expected without ads', data:[], backgroundColor:css('--base'), stack:'s'},
+    {label:'Uplift from ads', data:[], backgroundColor:css('--up'), stack:'s', borderRadius:{topLeft:2, topRight:2}}]},
+    options:{responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
+      plugins:{legend:{display:false}, tooltip:{filter:i => i.raw !== null && i.raw !== 0, callbacks:{label:c => c.dataset.label+': '+fmtK(c.parsed.y), afterBody:it => { const n = NOTES.find(n => n.w === it[0].dataIndex+1); return n ? ['', ...n.tip] : []; }}}},
+      scales:{x:{stacked:true, ticks:{...tick, maxTicksLimit:12}, grid:{display:false}}, y:{stacked:true, beginAtZero:true, suggestedMax:CFG.yMax, ticks:{...tick, callback:v => fmtK(v)}, grid:{color:grid}}}}});
+  cchart = new Chart($('cum'), {type:'line', data:{labels, datasets:[
+    {label:'With the plan', data:[], borderColor:css('--up'), borderWidth:2, pointRadius:0, tension:0, segment:{borderDash:c => c.p1DataIndex >= 38 ? [6,4] : undefined}},
+    {label:'Expected without ads', data:[], borderColor:css('--base'), borderWidth:2, pointRadius:0, tension:0, segment:{borderDash:c => c.p1DataIndex >= 38 ? [6,4] : undefined}}]},
+    options:{responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index', intersect:false},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => c.dataset.label+': '+fmtK(c.parsed.y)}}},
+      scales:{x:{ticks:{...tick, maxTicksLimit:7}, grid:{display:false}}, y:{beginAtZero:true, ticks:{...tick, callback:v => fmtK(v)}, grid:{color:grid}}}}});
+}
+function rebuildCharts(){ if (wchart){ wchart.destroy(); cchart.destroy(); wchart = null; } buildCharts(); render(); }
+
+$('addBtn').addEventListener('click', addPlan);
+function setScen(v){ scen = v; $('scRepeat').setAttribute('aria-pressed', v==='repeat'); $('scSmooth').setAttribute('aria-pressed', v==='smooth'); render(); }
+$('scRepeat').addEventListener('click', () => setScen('repeat'));
+$('scSmooth').addEventListener('click', () => setScen('smooth'));
+$('applyAll').addEventListener('click', () => { const v = +$('allRoas').value; if (isNaN(v)) return; lines.forEach(l => { l.roas = Math.max(0, v); const el = $('roas'+l.id); if (el) el.value = l.roas; }); render(); });
+try { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', rebuildCharts); } catch(e){}
+new MutationObserver(rebuildCharts).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+buildTable(); buildCharts(); render();
+</script>
+
+</body>
+</html>
